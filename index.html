@@ -1,0 +1,900 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Southwest Ohio Protocol Trainer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .dragging {
+            opacity: 0.5;
+            background-color: #e0f2fe;
+            border: 2px dashed #0284c7;
+        }
+        .drag-over {
+            background-color: #f0f9ff;
+            border: 2px dashed #38bdf8;
+        }
+        /* Custom scrollbar for better aesthetics */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9;
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #94a3b8;
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #64748b;
+        }
+    </style>
+</head>
+<body class="bg-slate-100 text-slate-800">
+
+    <div id="app" class="container mx-auto p-4 md:p-8 max-w-4xl">
+
+        <!-- Header -->
+        <header class="text-center mb-8">
+            <h1 class="text-3xl md:text-4xl font-bold text-slate-700">Southwest Ohio Protocol Trainer</h1>
+            <p class="text-slate-500 mt-2">A scenario-based tool to master the SWOP guidelines.</p>
+        </header>
+
+        <!-- Home Screen -->
+        <main id="home-screen" class="bg-white p-6 md:p-8 rounded-2xl shadow-lg">
+            <h2 class="text-2xl font-semibold mb-4 text-center">Select a Protocol</h2>
+            <div class="flex flex-col md:flex-row gap-4 items-center justify-center">
+                <select id="protocol-select" class="w-full md:w-2/3 p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition">
+                    <!-- Options will be populated by JavaScript -->
+                </select>
+                <button id="start-protocol-btn" class="w-full md:w-auto bg-blue-600 text-white font-semibold py-3 px-6 rounded-lg hover:bg-blue-700 transition shadow-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                    Go to Protocol
+                </button>
+            </div>
+            <div class="text-center my-4 text-slate-500">OR</div>
+            <button id="random-protocol-btn" class="w-full bg-slate-600 text-white font-semibold py-3 px-6 rounded-lg hover:bg-slate-700 transition shadow-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-500">
+                Start a Random Scenario
+            </button>
+        </main>
+
+        <!-- Scenario Screen -->
+        <div id="scenario-screen" class="hidden">
+            <div class="bg-white p-6 md:p-8 rounded-2xl shadow-lg">
+                <h2 id="protocol-title" class="text-2xl md:text-3xl font-bold text-center mb-4 text-blue-700"></h2>
+                <div class="bg-slate-50 p-4 rounded-lg border border-slate-200 mb-6">
+                    <h3 class="font-semibold text-lg mb-2 text-slate-600">Clinical Scenario</h3>
+                    <p id="scenario-text" class="text-slate-700 leading-relaxed"></p>
+                </div>
+                
+                <div id="questions-container">
+                    <!-- Questions will be dynamically inserted here -->
+                </div>
+
+                <div id="feedback-container" class="mt-6"></div>
+
+                <div class="mt-8 flex flex-col md:flex-row gap-4">
+                    <button id="check-answers-btn" class="w-full md:flex-1 bg-green-600 text-white font-semibold py-3 px-6 rounded-lg hover:bg-green-700 transition shadow-md">Check Answers</button>
+                    <button id="back-to-home-btn" class="w-full md:flex-1 bg-slate-500 text-white font-semibold py-3 px-6 rounded-lg hover:bg-slate-600 transition shadow-md">Back to Home</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- DATA STORE ---
+        // This is where all protocol scenarios and questions will live.
+        // We can easily add more objects to this array to expand the app.
+        const protocols = [
+            // Administrative
+            { id: "A100", title: "A100 - Administrative Protocol", scenario: "Scenario for this protocol is coming soon.", questions: [] },
+            { id: "A101", title: "A101 - Prehospital Communication", scenario: "Scenario for this protocol is coming soon.", questions: [] },
+            { id: "A102", title: "A102 - Rapid Sequence Intubation", scenario: "Scenario for this protocol is coming soon.", questions: [] },
+            { id: "A104", title: "A104 - Control of EMS at Scene", scenario: "Scenario for this protocol is coming soon.", questions: [] },
+            { id: "A105", title: "A105 - Determination of Death/Termination of CPR", scenario: "Scenario for this protocol is coming soon.", questions: [] },
+            { id: "A106", title: "A106 - Do Not Resuscitate Orders", scenario: "Scenario for this protocol is coming soon.", questions: [] },
+            { id: "A108", title: "A108 - Use of EMS Units as Transport", scenario: "Scenario for this protocol is coming soon.", questions: [] },
+            { id: "A109", title: "A109 - Advanced EMT (AEMT)", scenario: "Scenario for this protocol is coming soon.", questions: [] },
+            { id: "A110", title: "A110 - Highly Infectious Disease Transport", scenario: "Scenario for this protocol is coming soon.", questions: [] },
+            { id: "A111", title: "A111 - Hospital Status", scenario: "Scenario for this protocol is coming soon.", questions: [] },
+            { id: "A112", title: "A112 - Standards of Care During COVID-19", scenario: "Scenario for this protocol is coming soon.", questions: [] },
+            { id: "A113", title: "A113 - Definition of a Patient", scenario: "Scenario for this protocol is coming soon.", questions: [] },
+            // Symptom Based
+            {
+                id: "SB201",
+                title: "SB201 - Altered Level of Consciousness",
+                scenario: "You are dispatched to a 50-year-old female found by family to be 'acting strange'. She is conscious but only responds to painful stimuli. She has a known history of Type 1 Diabetes and seizure disorder.",
+                questions: [
+                    {
+                        type: 'multiple-choice',
+                        text: "According to SB201 and SB200, what is the first diagnostic test you should perform on any patient with an altered mental status?",
+                        options: ["12-Lead EKG", "Blood Glucose Evaluation", "Cincinnati Stroke Scale", "Pupil Exam"],
+                        correctAnswer: 1
+                    },
+                    {
+                        type: 'multiple-choice',
+                        text: "Her blood glucose is 45 mg/dL. She is unable to protect her airway. What is the preferred treatment?",
+                        options: ["Administer oral glucose", "Administer Dextrose 10% IV/IO", "Administer Glucagon 1mg IM", "Request orders for Dextrose 50%"],
+                        correctAnswer: 1
+                    },
+                    {
+                        type: 'multiple-choice',
+                        text: "If her blood glucose was normal and you witnessed her having a seizure, what would be your next primary action per protocol?",
+                        options: ["Move immediately to protocol M410 - Seizure", "Move immediately to protocol M414 - Stroke", "Administer Aspirin", "Place her in restraints"],
+                        correctAnswer: 0
+                    }
+                ]
+            },
+            { id: "SB202", title: "SB202 - Symptom Based Respiratory Distress", scenario: "Scenario for this protocol is coming soon.", questions: [] },
+            { id: "SB203", title: "SB203 - Symptom Based Chest Pain", scenario: "Scenario for this protocol is coming soon.", questions: [] },
+            { id: "SB204", title: "SB204 - Cardiac Arrest", scenario: "Scenario for this protocol is coming soon.", questions: [] },
+            { id: "SB205", title: "SB205 - Hypotension/Shock", scenario: "Scenario for this protocol is coming soon.", questions: [] },
+            // Cardiac
+            {
+                id: "C300",
+                title: "C300 - V-Fib/Tachycardia (Pulseless Adult)",
+                scenario: "You arrive on scene for an unresponsive 60-year-old male. Bystander CPR is in progress. You attach the monitor and confirm the rhythm is Ventricular Fibrillation.",
+                questions: [
+                    {
+                        type: 'multiple-choice',
+                        text: "What is your immediate, first action?",
+                        options: ["Administer Epinephrine 1mg IV", "Intubate the patient", "Defibrillate immediately", "Administer Amiodarone 300mg IV"],
+                        correctAnswer: 2
+                    },
+                    {
+                        type: 'multiple-choice',
+                        text: "After the first shock, you immediately resume CPR. After 2 minutes, the rhythm is still V-Fib. You deliver a second shock. What is the next medication and dose to administer?",
+                        options: ["Atropine 1mg IV", "Epinephrine 1mg IV/IO", "Amiodarone 150mg IV/IO", "Lidocaine 1.5 mg/kg IV/IO"],
+                        correctAnswer: 1
+                    },
+                    {
+                        type: 'prioritization',
+                        text: "After 2 cycles of CPR and shocks, the patient remains in V-Fib. Place the next sequence of actions in the correct order.",
+                        options: ["Administer Amiodarone 300mg IV/IO", "Deliver a shock", "Resume CPR for 2 minutes"],
+                        correctAnswer: ["Deliver a shock", "Resume CPR for 2 minutes", "Administer Amiodarone 300mg IV/IO"]
+                    },
+                    {
+                        type: 'multiple-choice',
+                        text: "If Amiodarone is not available, what is the alternative medication and initial dose?",
+                        options: ["Lidocaine 1.5 mg/kg", "Magnesium Sulfate 2g", "Sodium Bicarbonate 1 mEq/kg", "Atropine 1mg"],
+                        correctAnswer: 0
+                    }
+                ]
+            },
+            {
+                id: "C301",
+                title: "C301 - Asystole - PEA",
+                scenario: "You are treating a 72-year-old male in cardiac arrest. The monitor shows asystole in two leads. High-quality CPR is in progress and an advanced airway is in place.",
+                questions: [
+                    {
+                        type: 'multiple-choice',
+                        text: "What is the first-line medication for asystole?",
+                        options: ["Atropine 1mg", "Sodium Bicarbonate 1 mEq/kg", "Amiodarone 300mg", "Epinephrine 1mg"],
+                        correctAnswer: 3
+                    },
+                    {
+                        type: 'multiple-choice',
+                        text: "How often should Epinephrine be administered during the resuscitation?",
+                        options: ["Every 2 minutes", "Every 3-5 minutes", "Only once", "Every 5-10 minutes"],
+                        correctAnswer: 1
+                    },
+                    {
+                        type: 'multiple-choice',
+                        text: "Which of the following is a critical action when managing PEA or Asystole?",
+                        options: ["Frequent defibrillation", "Searching for and treating possible causes (H's and T's)", "Administering multiple fluid boluses regardless of cause", "Initiating transcutaneous pacing"],
+                        correctAnswer: 1
+                    }
+                ]
+            },
+            {
+                id: "C302",
+                title: "C302 - Bradycardia",
+                scenario: "You find an 80-year-old female complaining of dizziness and weakness. She is pale and diaphoretic. Her vitals are BP 78/50, P 38, RR 18. The monitor shows a 3rd Degree AV Block.",
+                questions: [
+                    {
+                        type: 'multiple-choice',
+                        text: "This patient is showing signs of unstable bradycardia. What is the first medication you should administer?",
+                        options: ["Epinephrine 1mg", "Dopamine infusion", "Atropine 1mg", "Lidocaine 1.5 mg/kg"],
+                        correctAnswer: 2
+                    },
+                    {
+                        type: 'multiple-choice',
+                        text: "What is the maximum total dose of Atropine for an adult?",
+                        options: ["1 mg", "2 mg", "3 mg", "4 mg"],
+                        correctAnswer: 2
+                    },
+                    {
+                        type: 'multiple-choice',
+                        text: "If the patient does not respond to the maximum dose of Atropine and remains unstable, what is the next appropriate intervention?",
+                        options: ["Administer a fluid bolus", "Synchronized Cardioversion", "Transcutaneous Pacing", "Administer Amiodarone"],
+                        correctAnswer: 2
+                    }
+                ]
+            },
+            // Medical
+            {
+                id: "M400",
+                title: "M400 - Acute Coronary Syndrome",
+                scenario: "You are dispatched to a 68-year-old male complaining of substernal chest pressure for the last hour. He describes it as a 'heavy weight' on his chest that radiates to his left arm. He is diaphoretic and nauseous. His history includes hypertension and high cholesterol.",
+                questions: [
+                    {
+                        type: 'prioritization',
+                        text: "Based on the M400 ACS protocol, what is the correct order of your initial actions for this patient? (Drag and drop to reorder)",
+                        options: ["Administer Aspirin 324mg", "Obtain 12-Lead EKG", "Administer Nitroglycerin 0.4mg SL", "Establish IV access"],
+                        correctAnswer: ["Obtain 12-Lead EKG", "Administer Aspirin 324mg", "Establish IV access", "Administer Nitroglycerin 0.4mg SL"],
+                    },
+                    {
+                        type: 'multiple-choice',
+                        text: "You find that the patient has a STEMI on the 12-lead. What is your primary transport consideration?",
+                        options: [
+                            "Transport to the closest hospital.",
+                            "Transport to the patient's preferred hospital.",
+                            "Immediately initiate transport to a facility that offers percutaneous coronary interventions (PCI).",
+                            "Wait on scene for the patient to be pain-free before transport."
+                        ],
+                        correctAnswer: 2,
+                    },
+                    {
+                        type: 'multiple-choice',
+                        text: "Before administering Nitroglycerin, which of the following questions is critical to ask?",
+                        options: [
+                            "When was your last meal?",
+                            "Have you taken any erectile dysfunction medication like Viagra or Cialis recently?",
+                            "Do you have a history of asthma?",
+                            "Are you allergic to penicillin?"
+                        ],
+                        correctAnswer: 1,
+                    },
+                    {
+                        type: 'multiple-choice',
+                        text: "What is the correct initial dose of Aspirin according to the protocol?",
+                        options: [ "81 mg", "162 mg", "324 mg", "500 mg" ],
+                        correctAnswer: 2,
+                    }
+                ]
+            },
+            {
+                id: "M403",
+                title: "M403 - Asthma - COPD",
+                scenario: "You respond to a 45-year-old male in severe respiratory distress. He is sitting in a tripod position, has audible wheezing, and can only speak in 1-2 word sentences. He has a history of severe COPD. His SpO2 is 88% on room air.",
+                questions: [
+                    {
+                        type: 'prioritization',
+                        text: "Drag and drop your initial treatments into the correct order for this severe COPD exacerbation.",
+                        options: ["Administer corticosteroids (Solu-Medrol)", "Establish IV access", "Administer Albuterol & Ipratropium via nebulizer", "Consider initiating CPAP"],
+                        correctAnswer: ["Administer Albuterol & Ipratropium via nebulizer", "Consider initiating CPAP", "Establish IV access", "Administer corticosteroids (Solu-Medrol)"]
+                    },
+                    {
+                        type: 'multiple-choice',
+                        text: "What is the correct dose of Solu-Medrol (Methylprednisolone) for an adult with impending respiratory failure due to COPD/Asthma?",
+                        options: ["40 mg", "60 mg", "80 mg", "125 mg"],
+                        correctAnswer: 3
+                    },
+                    {
+                        type: 'multiple-choice',
+                        text: "If this patient had a history of severe ASTHMA (not COPD) and was not responding to nebulizers, what would be the next appropriate medication to administer IM?",
+                        options: ["Magnesium Sulfate 2g IV", "Epinephrine 0.3mg IM", "Diphenhydramine 50mg", "Fentanyl for anxiety"],
+                        correctAnswer: 1
+                    },
+                    {
+                        type: 'multiple-choice',
+                        text: "What is a primary contraindication for initiating CPAP (Protocol T709)?",
+                        options: ["History of hypertension", "Systolic BP < 90 mmHg", "Audible wheezing", "Patient is over 65 years old"],
+                        correctAnswer: 1
+                    }
+                ]
+            },
+            {
+                id: "M409",
+                title: "M409 - Allergic Reaction - Anaphylaxis",
+                scenario: "A 34-year-old female was stung by a bee 10 minutes ago. She now complains of shortness of breath, her voice is hoarse, and she has widespread urticaria (hives). Her BP is 88/50, pulse is 120, and she has audible wheezing.",
+                questions: [
+                    {
+                        type: 'multiple-choice',
+                        text: "What is the first and most critical medication to administer to this patient?",
+                        options: ["Diphenhydramine 50mg IV", "Albuterol 2.5mg via nebulizer", "Epinephrine 0.3mg (1 mg/mL) IM", "Normal Saline 1L bolus"],
+                        correctAnswer: 2
+                    },
+                    {
+                        type: 'multiple-choice',
+                        text: "After administering epinephrine, her wheezing persists. What treatment should be initiated next?",
+                        options: ["Repeat Epinephrine IM", "Administer a fluid bolus", "Administer Albuterol via nebulizer", "Administer Diphenhydramine IV"],
+                        correctAnswer: 2
+                    },
+                    {
+                        type: 'prioritization',
+                        text: "Place the following interventions in the correct order of priority for this patient.",
+                        options: ["Establish IV access and begin fluid bolus", "Administer Epinephrine IM", "Administer Albuterol for wheezing", "Administer Diphenhydramine"],
+                        correctAnswer: ["Administer Epinephrine IM", "Administer Albuterol for wheezing", "Establish IV access and begin fluid bolus", "Administer Diphenhydramine"]
+                    }
+                ]
+            },
+             {
+                id: "M410",
+                title: "M410 - Seizure",
+                scenario: "You are called for a 40-year-old male actively seizing. It has been ongoing for approximately 7 minutes according to bystanders. He has a known seizure disorder but has not been taking his medication.",
+                questions: [
+                    {
+                        type: 'multiple-choice',
+                        text: "What is the first-line medication and dose for an adult who is actively seizing?",
+                        options: ["Lorazepam 2mg IV", "Midazolam (Versed) 10mg IM", "Diazepam 5mg IV", "Ketamine 1mg/kg IM"],
+                        correctAnswer: 1
+                    },
+                    {
+                        type: 'multiple-choice',
+                        text: "After administering Midazolam, the seizure stops, but the patient's respirations become shallow at 6 breaths/minute. What is your immediate priority?",
+                        options: ["Administer Flumazenil", "Support ventilations with a BVM", "Check a blood glucose", "Administer Naloxone"],
+                        correctAnswer: 1
+                    },
+                    {
+                        type: 'multiple-choice',
+                        text: "What is a critical assessment that should be performed on every postictal patient?",
+                        options: ["A detailed neurological exam", "A 12-Lead EKG", "Check for tongue lacerations", "A blood glucose check"],
+                        correctAnswer: 3
+                    }
+                ]
+            },
+            {
+                id: "M414",
+                title: "M414 - Stroke",
+                scenario: "You are called to a residence for a 78-year-old female who woke up with right-sided weakness and slurred speech. Her husband states she was last seen normal when she went to bed 8 hours ago. Her blood glucose is 110 mg/dL.",
+                questions: [
+                    {
+                        type: 'multiple-choice',
+                        text: "Which of the following is NOT part of the Cincinnati Prehospital Stroke Scale?",
+                        options: ["Facial Droop", "Arm Drift", "Abnormal Speech", "Grip Strength"],
+                        correctAnswer: 3
+                    },
+                    {
+                        type: 'multiple-choice',
+                        text: "What is the most critical piece of information to obtain and document for this patient?",
+                        options: ["Her blood pressure", "Her last meal", "Her 'Last Known Well' time", "Her allergies"],
+                        correctAnswer: 2
+                    },
+                    {
+                        type: 'multiple-choice',
+                        text: "Based on the protocol's flow chart for a suspected stroke with a 'Last Known Well' time of < 24 hours, what is the appropriate action?",
+                        options: ["Transport non-emergently to the closest hospital.", "Call a 'STROKE ALERT' and transport to the closest certified stroke center.", "The patient is outside the window for any intervention.", "Wait on scene for symptoms to resolve."],
+                        correctAnswer: 1
+                    }
+                ]
+            },
+            // Trauma
+            {
+                id: "S500",
+                title: "S500 - Hemorrhagic Shock",
+                scenario: "You are treating a 30-year-old male involved in a high-speed MVC. He has a deformed pelvis, bilateral femur fractures, and is pale, cool, and diaphoretic. His pulse is 130, respirations are 28, and you cannot palpate a radial pulse. His GCS is 14 (confused).",
+                questions: [
+                    {
+                        type: 'multiple-choice',
+                        text: "What is the target for fluid resuscitation in this patient with no suspected head injury?",
+                        options: ["Titrate fluids until SBP is > 120 mmHg", "Administer a 2L bolus wide open", "Titrate fluids until a radial pulse is palpable or mental status improves", "Withhold fluids until arrival at the trauma center"],
+                        correctAnswer: 2
+                    },
+                    {
+                        type: 'multiple-choice',
+                        text: "What adjunct is specifically indicated for this patient's injuries?",
+                        options: ["A traction splint", "A pelvic binder", "A nasal cannula", "An occlusive dressing"],
+                        correctAnswer: 1
+                    },
+                    {
+                        type: 'multiple-choice',
+                        text: "If this same patient had a significant head injury (GCS 8), what would your SBP target be during fluid resuscitation?",
+                        options: ["SBP > 70 mmHg", "SBP > 90 mmHg", "SBP > 110 mmHg", "The target would not change"],
+                        correctAnswer: 1
+                    },
+                    {
+                        type: 'multiple-choice',
+                        text: "This patient meets the criteria for which additional prehospital medication to control bleeding (Protocol S506)?",
+                        options: ["TXA (Tranexamic Acid)", "Fentanyl for pain", "Ondansetron for nausea", "Sodium Bicarbonate"],
+                        correctAnswer: 0
+                    }
+                ]
+            },
+            {
+                id: "S505",
+                title: "S505 - Pre-Hospital Pain Management",
+                scenario: "You are treating a 30-year-old with an isolated, painful extremity fracture from a fall. The patient is alert and oriented, with a GCS of 15. The pain is described as acute and severe (8/10).",
+                questions: [
+                    {
+                        type: 'multiple-choice',
+                        text: "You obtain a blood pressure of 96/60 mmHg. According to protocol S505, is this patient a candidate for Fentanyl or Morphine?",
+                        options: ["Yes, the patient is in severe pain.", "No, the systolic BP must be greater than 100 mmHg.", "Yes, but only a half dose should be given.", "No, pain medication is contraindicated for fractures."],
+                        correctAnswer: 1
+                    },
+                    {
+                        type: 'multiple-choice',
+                        text: "The patient states they have had this pain for over a year and it 'flares up'. Does this patient meet the criteria for prehospital pain management under this protocol?",
+                        options: ["Yes, any severe pain should be treated.", "Yes, as long as their BP is stable.", "No, this protocol is for the management of ACUTE pain, not chronic pain.", "No, only traumatic pain can be treated."],
+                        correctAnswer: 2
+                    },
+                    {
+                        type: 'multiple-choice',
+                        text: "What is the minimum age for a patient to be treated under the S505 Pre-Hospital Pain Management protocol?",
+                        options: ["12 years old", "14 years old", "16 years old", "18 years old"],
+                        correctAnswer: 2
+                    },
+                     {
+                        type: 'multiple-choice',
+                        text: "The patient's BP is 140/90. Which of the following is an appropriate initial dose of IV Fentanyl?",
+                        options: ["200 mcg", "125 mcg", "50 mcg", "5 mg"],
+                        correctAnswer: 2
+                    }
+                ]
+            },
+            {
+                id: "S506",
+                title: "S506 - Administration of Tranexamic Acid (TXA)",
+                scenario: "You respond to a motorcycle crash. The 40-year-old male rider has an open femur fracture with significant bleeding controlled by a tourniquet. He also has an obvious head injury (GCS 12). The injury occurred approximately 45 minutes ago. His vitals are BP 88/50, P 120, RR 24. A second ambulance is transporting another patient from the same scene who has an isolated closed head injury.",
+                questions: [
+                    {
+                        type: 'multiple-choice',
+                        text: "Does this patient meet the hemodynamic criteria (BP and pulse) for TXA administration?",
+                        options: ["Yes, both SBP <90 and HR >110 are met.", "No, the SBP is too high.", "No, the heart rate is too slow.", "Only the heart rate criteria is met."],
+                        correctAnswer: 0
+                    },
+                    {
+                        type: 'multiple-choice',
+                        text: "The patient's head injury is a concern. Based on protocol, is TXA contraindicated in this specific patient?",
+                        options: ["Yes, TXA is contraindicated in all head injuries.", "No, TXA is only contraindicated in ISOLATED closed head injuries.", "Yes, any GCS less than 15 is a contraindication.", "No, head injuries do not affect TXA administration."],
+                        correctAnswer: 1
+                    },
+                    {
+                        type: 'multiple-choice',
+                        text: "If the time of injury was unknown, would this patient still be a candidate for TXA?",
+                        options: ["Yes, as long as the patient is hypotensive.", "Yes, the time limit is 6 hours.", "No, the time of injury must be KNOWN to be less than 3 hours.", "No, the time of injury does not matter."],
+                        correctAnswer: 2
+                    },
+                    {
+                        type: 'multiple-choice',
+                        text: "What is the correct dose and administration method for TXA in an adult?",
+                        options: ["1g IV push over 30 seconds", "1g mixed in 100mL of NS, infused over 10 minutes", "15 mg/kg IV push", "500mg in 500mL of NS, infused wide open"],
+                        correctAnswer: 1
+                    }
+                ]
+            },
+            // Pediatric
+            {
+                id: "P601",
+                title: "P601 - Pediatric Pulseless Arrest (V-Fib/V-Tach)",
+                scenario: "You are on scene with a 5-year-old child (approx. 18 kg) who collapsed. Bystander CPR is in progress. Your monitor shows V-Fib.",
+                questions: [
+                    {
+                        type: 'multiple-choice',
+                        text: "What is the correct energy setting for the initial defibrillation?",
+                        options: ["20 Joules", "36 Joules", "50 Joules", "100 Joules"],
+                        correctAnswer: 1
+                    },
+                    {
+                        type: 'multiple-choice',
+                        text: "After the second shock, the child remains in V-Fib. What is the correct dose of IV Epinephrine?",
+                        options: ["0.01 mg", "0.1 mg", "0.18 mg", "1 mg"],
+                        correctAnswer: 2
+                    },
+                    {
+                        type: 'multiple-choice',
+                        text: "If V-Fib persists after Epinephrine, what is the correct dose of Amiodarone?",
+                        options: ["50 mg", "90 mg", "150 mg", "300 mg"],
+                        correctAnswer: 1
+                    },
+                     {
+                        type: 'multiple-choice',
+                        text: "What is the correct energy setting for the second defibrillation?",
+                        options: ["2 J/kg (~36 J)", "4 J/kg (~72 J)", "6 J/kg (~108 J)", "10 J/kg (~180 J)"],
+                        correctAnswer: 1
+                    }
+                ]
+            },
+            {
+                id: "P607",
+                title: "P607 - Pediatric Respiratory Distress (Wheezing)",
+                scenario: "You are treating a 6-year-old, 20kg male with a history of asthma. He is in moderate respiratory distress with significant wheezing and suprasternal retractions. His PRAM score is 6.",
+                questions: [
+                    {
+                        type: 'multiple-choice',
+                        text: "According to the PRAM score of 6 (moderate), what is the correct initial treatment?",
+                        options: ["A single Albuterol nebulizer treatment", "Three back-to-back Albuterol/Atrovent nebulizer treatments", "IM Epinephrine", "Immediate intubation"],
+                        correctAnswer: 1
+                    },
+                    {
+                        type: 'multiple-choice',
+                        text: "What is the correct dose of corticosteroids (Solu-Medrol given PO) for this 6-year-old (age 3-7 years) patient?",
+                        options: ["10mg", "30mg", "60mg", "125mg"],
+                        correctAnswer: 1
+                    },
+                    {
+                        type: 'multiple-choice',
+                        text: "If the patient's condition worsens to 'Severe' (PRAM 8-12), what additional interventions should be considered?",
+                        options: ["Pain management", "IV placement and Normal Saline bolus", "Administering Aspirin", "Placing a pelvic binder"],
+                        correctAnswer: 1
+                    }
+                ]
+            },
+            {
+                id: "P610",
+                title: "P610 - Pediatric Seizure",
+                scenario: "An 18-month-old, 10kg child is actively having a generalized tonic-clonic seizure. The parents state it has been going on for about 5 minutes. The child has a fever of 103°F.",
+                questions: [
+                    {
+                        type: 'multiple-choice',
+                        text: "The seizure has lasted longer than 5 minutes. What is the preferred medication, route, and dose for this 10kg child?",
+                        options: ["Midazolam (Versed) 5mg IM", "Midazolam (Versed) 1mg IV", "Midazolam (Versed) 2mg IM/IN", "Lorazepam 1mg IV"],
+                        correctAnswer: 2
+                    },
+                    {
+                        type: 'multiple-choice',
+                        text: "What is the most important assessment to perform immediately after controlling the seizure?",
+                        options: ["Check for traumatic injuries", "Check a blood glucose", "Obtain a 12-Lead EKG", "Apply a C-collar"],
+                        correctAnswer: 1
+                    },
+                    {
+                        type: 'multiple-choice',
+                        text: "Most seizures in children are self-limited. What are your primary concerns for a postictal child?",
+                        options: ["Airway management and oxygenation", "Obtaining IV access immediately", "Administering pain medication", "Rapidly cooling the patient"],
+                        correctAnswer: 0
+                    }
+                ]
+            },
+            // OB/GYN
+            {
+                id: "O800",
+                title: "O800 - Imminent Delivery (Childbirth)",
+                scenario: "You are called to a 28-year-old female who is 39 weeks pregnant and in active labor. Contractions are 2 minutes apart and she has a strong urge to push. The baby's head is crowning.",
+                questions: [
+                    {
+                        type: 'multiple-choice',
+                        text: "As the baby's head emerges, what is your first action?",
+                        options: ["Pull gently on the head", "Check for a nuchal cord", "Immediately suction the mouth and nose", "Administer high-flow oxygen to the mother"],
+                        correctAnswer: 1
+                    },
+                    {
+                        type: 'multiple-choice',
+                        text: "The baby has delivered and is vigorous (strong cry, good tone). According to ACOG recommendations, when should you clamp the umbilical cord?",
+                        options: ["Immediately", "After 30-60 seconds", "After the placenta delivers", "After 5 minutes"],
+                        correctAnswer: 1
+                    },
+                    {
+                        type: 'multiple-choice',
+                        text: "You notice a gush of blood and the umbilical cord appears to lengthen. This indicates:",
+                        options: ["Postpartum hemorrhage", "Placental abruption", "Uterine rupture", "Imminent delivery of the placenta"],
+                        correctAnswer: 3
+                    },
+                    {
+                        type: 'multiple-choice',
+                        text: "After delivery of the placenta, the mother continues to bleed heavily. What is your first-line treatment for postpartum hemorrhage?",
+                        options: ["Administer Pitocin", "Aggressive fundal massage", "Administer TXA", "Rapid transport"],
+                        correctAnswer: 1
+                    }
+                ]
+            },
+			 // OB/GYN
+            {
+                id: "O801",
+                title: "O801 - PREGNANCY AND POSTPARTUM COMPLICATIONS",
+                scenario: "Add a Scenario",
+                questions: [
+                    {
+                        type: 'multiple-choice',
+                        text: "All pregnant trauma patients past the age of viability of ____ weeks  should be monitored on an obstetrical unit for signs of increased uterine activity which could indicate placental injury",
+                        options: ["23 Weeks", "10 Weeks", "36 Weeks", "15 Weeks"],
+                        correctAnswer: 1
+                    },
+                    {
+                        type: 'multiple-choice',
+                        text: "Eclampsia can also occur up to ___ after delivery.  If seizing, these patients should be treated as eclampsia.",
+                        options: ["Eclampsia can not happen after delivery", "6 Weeks", "30 days", "A Year"],
+                        correctAnswer: 2
+                    },
+                    {
+                        type: 'multiple-choice',
+                        text: "If actively seizing, give ____ first line as per the general seizure protocol.",
+                        options: ["15 LPM of Oxygen", "a Fluid Bolus", "Magnesium Sulfate", "Versed"],
+                        correctAnswer: 4
+                    },
+					{
+                        type: 'multiple-choice',
+                        text: "In Cardiac Arrest, All pregnant patients greater than ____ week(s) should be transported as soon as possible" ,
+                        options: ["10", "36", "24", "1"],
+                        correctAnswer: 3
+                    },
+                    {
+                        type: 'multiple-choice',
+                        text: "True or False: Management of the pregnant cardiac arrest patient is similar to the non-pregnant patient",
+                        options: ["True", "False"],
+                        correctAnswer: 1
+                    }
+                ]
+            },
+        ];
+
+
+        // --- DOM ELEMENTS ---
+        const homeScreen = document.getElementById('home-screen');
+        const scenarioScreen = document.getElementById('scenario-screen');
+        const protocolSelect = document.getElementById('protocol-select');
+        const startProtocolBtn = document.getElementById('start-protocol-btn');
+        const randomProtocolBtn = document.getElementById('random-protocol-btn');
+        const protocolTitle = document.getElementById('protocol-title');
+        const scenarioText = document.getElementById('scenario-text');
+        const questionsContainer = document.getElementById('questions-container');
+        const feedbackContainer = document.getElementById('feedback-container');
+        const checkAnswersBtn = document.getElementById('check-answers-btn');
+        const backToHomeBtn = document.getElementById('back-to-home-btn');
+
+        let currentProtocol = null;
+        
+        // --- DRAG AND DROP LOGIC ---
+        let draggedItem = null;
+
+        function handleDragStart(e) {
+            draggedItem = e.target;
+            e.dataTransfer.effectAllowed = 'move';
+            e.dataTransfer.setData('text/html', e.target.innerHTML);
+            setTimeout(() => {
+                e.target.classList.add('dragging');
+            }, 0);
+        }
+
+        function handleDragEnd(e) {
+            e.target.classList.remove('dragging');
+        }
+
+        function handleDragOver(e) {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+            const container = e.target.closest('.drag-container');
+            if (!container) return;
+            
+            const afterElement = getDragAfterElement(container, e.clientY);
+            const currentlyDragged = container.querySelector('.dragging');
+            if (currentlyDragged) {
+                if (afterElement == null) {
+                    container.appendChild(currentlyDragged);
+                } else {
+                    container.insertBefore(currentlyDragged, afterElement);
+                }
+            }
+        }
+        
+        function getDragAfterElement(container, y) {
+            const draggableElements = [...container.querySelectorAll('.draggable:not(.dragging)')];
+
+            return draggableElements.reduce((closest, child) => {
+                const box = child.getBoundingClientRect();
+                const offset = y - box.top - box.height / 2;
+                if (offset < 0 && offset > closest.offset) {
+                    return { offset: offset, element: child };
+                } else {
+                    return closest;
+                }
+            }, { offset: Number.NEGATIVE_INFINITY }).element;
+        }
+
+
+        // --- APPLICATION LOGIC ---
+
+        function populateProtocolSelect() {
+            // Group protocols for better organization in the dropdown
+            const groupedProtocols = {
+                'Administrative': protocols.filter(p => p.id.startsWith('A')),
+                'Symptom Based': protocols.filter(p => p.id.startsWith('SB')),
+                'Cardiac': protocols.filter(p => p.id.startsWith('C')),
+                'Medical': protocols.filter(p => p.id.startsWith('M')),
+                'Trauma': protocols.filter(p => p.id.startsWith('S')),
+                'Pediatric': protocols.filter(p => p.id.startsWith('P')),
+                'Procedures': protocols.filter(p => p.id.startsWith('T')),
+                'OB/GYN': protocols.filter(p => p.id.startsWith('O')),
+            };
+            
+            let selectHTML = '';
+            for (const group in groupedProtocols) {
+                if (groupedProtocols[group].length > 0) {
+                    selectHTML += `<optgroup label="${group}">`;
+                    selectHTML += groupedProtocols[group].map(p => `<option value="${p.id}">${p.title}</option>`).join('');
+                    selectHTML += `</optgroup>`;
+                }
+            }
+            protocolSelect.innerHTML = selectHTML;
+        }
+
+        function renderQuestions(questions) {
+            questionsContainer.innerHTML = '';
+            feedbackContainer.innerHTML = '';
+            checkAnswersBtn.disabled = false;
+            checkAnswersBtn.classList.remove('bg-gray-400', 'cursor-not-allowed');
+            checkAnswersBtn.classList.add('bg-green-600', 'hover:bg-green-700');
+
+
+            questions.forEach((q, index) => {
+                const questionDiv = document.createElement('div');
+                questionDiv.className = 'mb-6 p-4 border border-slate-200 rounded-lg bg-white';
+                questionDiv.dataset.questionIndex = index;
+                
+                let contentHTML = `<p class="font-semibold mb-3 text-slate-800">${index + 1}. ${q.text}</p>`;
+
+                if (q.type === 'multiple-choice') {
+                    contentHTML += `<div class="space-y-2">`;
+                    q.options.forEach((opt, optIndex) => {
+                        contentHTML += `
+                            <label class="flex items-center p-3 border border-slate-200 rounded-md hover:bg-slate-50 transition cursor-pointer has-[:checked]:bg-blue-50 has-[:checked]:border-blue-400">
+                                <input type="radio" name="q${index}" value="${optIndex}" class="mr-3 h-4 w-4 text-blue-600 focus:ring-blue-500 border-slate-300">
+                                <span class="text-slate-700">${opt}</span>
+                            </label>
+                        `;
+                    });
+                    contentHTML += `</div>`;
+                } else if (q.type === 'prioritization') {
+                    contentHTML += `<div class="drag-container border border-slate-300 rounded-lg p-2 space-y-2 bg-slate-50" data-question-index="${index}">`;
+                    // Shuffle options for prioritization questions
+                    const shuffledOptions = [...q.options].sort(() => Math.random() - 0.5);
+                    shuffledOptions.forEach((opt, optIndex) => {
+                        contentHTML += `
+                            <div class="draggable flex items-center bg-white p-3 border rounded-md cursor-grab active:cursor-grabbing shadow-sm" draggable="true" data-option="${opt}">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-slate-400 mr-3 shrink-0"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+                                <span>${opt}</span>
+                            </div>
+                        `;
+                    });
+                    contentHTML += `</div>`;
+                }
+                questionDiv.innerHTML = contentHTML;
+                questionsContainer.appendChild(questionDiv);
+            });
+
+            // Add drag event listeners after creating elements
+            document.querySelectorAll('.draggable').forEach(item => {
+                item.addEventListener('dragstart', handleDragStart);
+                item.addEventListener('dragend', handleDragEnd);
+            });
+            document.querySelectorAll('.drag-container').forEach(container => {
+                container.addEventListener('dragover', handleDragOver);
+            });
+        }
+        
+        function displayScenario(protocol) {
+            currentProtocol = protocol;
+            homeScreen.classList.add('hidden');
+            scenarioScreen.classList.remove('hidden');
+            window.scrollTo(0, 0);
+
+
+            protocolTitle.textContent = protocol.title;
+            scenarioText.textContent = protocol.scenario;
+
+            if (protocol.questions && protocol.questions.length > 0) {
+                renderQuestions(protocol.questions);
+            } else {
+                questionsContainer.innerHTML = `<div class="text-center p-4 bg-yellow-100 text-yellow-800 rounded-lg">A scenario for this protocol is coming soon. Please select another.</div>`;
+                checkAnswersBtn.disabled = true;
+                checkAnswersBtn.classList.add('bg-gray-400', 'cursor-not-allowed');
+            }
+        }
+
+        function checkAnswers() {
+            if (!currentProtocol) return;
+            let score = 0;
+            const totalQuestions = currentProtocol.questions.length;
+            feedbackContainer.innerHTML = '';
+            
+            currentProtocol.questions.forEach((q, index) => {
+                const questionDiv = questionsContainer.querySelector(`[data-question-index="${index}"]`);
+                let isCorrect = false;
+
+                if (q.type === 'multiple-choice') {
+                    const selected = questionDiv.querySelector(`input[name="q${index}"]:checked`);
+                    if (selected && parseInt(selected.value) === q.correctAnswer) {
+                        isCorrect = true;
+                    }
+                    if (selected) {
+                        const label = selected.parentElement;
+                        label.classList.remove('border-slate-200');
+                        if (isCorrect) {
+                            label.classList.add('bg-green-100', 'border-green-500');
+                        } else {
+                            label.classList.add('bg-red-100', 'border-red-500');
+                            const correctLabel = questionDiv.querySelector(`input[value="${q.correctAnswer}"]`).parentElement;
+                            correctLabel.classList.remove('border-slate-200');
+                            correctLabel.classList.add('bg-green-100', 'border-green-500', 'ring-2', 'ring-green-400');
+                        }
+                    } else {
+                         const correctLabel = questionDiv.querySelector(`input[value="${q.correctAnswer}"]`).parentElement;
+                         correctLabel.classList.remove('border-slate-200');
+                         correctLabel.classList.add('bg-yellow-100', 'border-yellow-500', 'ring-2', 'ring-yellow-400');
+                    }
+
+
+                } else if (q.type === 'prioritization') {
+                    const container = questionDiv.querySelector('.drag-container');
+                    const userOrder = [...container.querySelectorAll('.draggable')].map(item => item.dataset.option);
+                    isCorrect = JSON.stringify(userOrder) === JSON.stringify(q.correctAnswer);
+
+                    userOrder.forEach((item, itemIndex) => {
+                        const itemDiv = container.children[itemIndex];
+                        itemDiv.classList.remove('bg-white');
+                        if(item === q.correctAnswer[itemIndex]){
+                           itemDiv.classList.add('bg-green-100', 'border-green-400');
+                        } else {
+                           itemDiv.classList.add('bg-red-100', 'border-red-400');
+                        }
+                    });
+
+                    if(!isCorrect) {
+                        const explanation = document.createElement('div');
+                        explanation.className = 'mt-2 p-3 bg-blue-50 border border-blue-200 rounded-md text-sm text-blue-800';
+                        explanation.innerHTML = `<strong class="font-semibold">Correct Order:</strong><ol class="list-decimal list-inside mt-1 space-y-1">${q.correctAnswer.map(i => `<li>${i}</li>`).join('')}</ol>`;
+                        container.appendChild(explanation);
+                    }
+                }
+
+                if (isCorrect) {
+                    score++;
+                }
+            });
+            
+            const scoreDiv = document.createElement('div');
+            scoreDiv.className = 'text-center p-4 rounded-lg text-lg font-semibold animate-pulse';
+            if (score === totalQuestions) {
+                scoreDiv.classList.add('bg-green-100', 'text-green-800');
+                scoreDiv.textContent = `Excellent! You got ${score}/${totalQuestions} correct.`;
+            } else {
+                scoreDiv.classList.add('bg-yellow-100', 'text-yellow-800');
+                scoreDiv.textContent = `You got ${score}/${totalQuestions} correct. Review the feedback above.`;
+            }
+            feedbackContainer.appendChild(scoreDiv);
+            setTimeout(() => scoreDiv.classList.remove('animate-pulse'), 1000);
+
+            
+            checkAnswersBtn.disabled = true;
+            checkAnswersBtn.classList.remove('bg-green-600', 'hover:bg-green-700');
+            checkAnswersBtn.classList.add('bg-gray-400', 'cursor-not-allowed');
+
+            questionsContainer.querySelectorAll('input, .draggable').forEach(el => {
+                if(el.tagName === 'INPUT') el.disabled = true;
+                if(el.classList.contains('draggable')) el.draggable = false;
+            });
+        }
+        
+        function showHomeScreen() {
+            homeScreen.classList.remove('hidden');
+            scenarioScreen.classList.add('hidden');
+            currentProtocol = null;
+        }
+
+        // --- EVENT LISTENERS ---
+        startProtocolBtn.addEventListener('click', () => {
+            const selectedId = protocolSelect.value;
+            const protocol = protocols.find(p => p.id === selectedId);
+            if (protocol) {
+                displayScenario(protocol);
+            }
+        });
+
+        randomProtocolBtn.addEventListener('click', () => {
+            const availableProtocols = protocols.filter(p => p.questions && p.questions.length > 0);
+            if (availableProtocols.length > 0) {
+                const randomIndex = Math.floor(Math.random() * availableProtocols.length);
+                displayScenario(availableProtocols[randomIndex]);
+            } else {
+                alert("No scenarios are available yet.");
+            }
+        });
+
+        checkAnswersBtn.addEventListener('click', checkAnswers);
+        backToHomeBtn.addEventListener('click', showHomeScreen);
+
+        // --- INITIALIZATION ---
+        populateProtocolSelect();
+    </script>
+</body>
+</html>
+
+
+
+
